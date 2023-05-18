@@ -1,0 +1,4 @@
+PyYAML
+uuid
+prometheus-client
+requests
