@@ -10,7 +10,7 @@ yaml.Dumper.ignore_aliases = lambda *args : True
 
 DEFAULT_TEMPLATE_NAME = 'Template My Application'
 DEFAULT_TEMPLATE_MASTER_KEY = 'http_raw_prometheus_metrics'
-DEFAULT_TEMPLATE_TAGS = []
+DEFAULT_TEMPLATE_APPLICATION_TAG = ''
 DEFAULT_METRICS_URL = 'http://localhost:9000/metrics'
 
 
@@ -21,8 +21,8 @@ cmd_parser = ArgumentParser(
 cmd_parser.add_argument('-u', '--url', metavar='METRICS_URL', action='store', default=DEFAULT_METRICS_URL)
 cmd_parser.add_argument('-n', '--name', metavar='TEMPLATE_NAME', action='store', default=DEFAULT_TEMPLATE_NAME)
 cmd_parser.add_argument('-m', '--master-key', metavar='ITEM_MASTER_KEY', action='store', default=DEFAULT_TEMPLATE_MASTER_KEY)
+cmd_parser.add_argument('-t', '--tag', metavar='APPLICATION_TAG', action='store', default=DEFAULT_TEMPLATE_APPLICATION_TAG)
 args = cmd_parser.parse_args()
-# cmd_parser.add_argument('-t', '--tags', action='store')
 
 def get_schema(url):
     metrics = requests.get(url).content
@@ -97,8 +97,9 @@ class Zabbix60Template():
             'type': 'HTTP_AGENT',
             'key': self.master_key,
             'trends': '0',
+            'history': '0',
             'value_type': 'TEXT',
-            'url': f'{parsed_url.scheme}://{{HOST.NAME}}:{parsed_url.port}/{parsed_url.path}'
+            'url': f'{parsed_url.scheme}://{{HOST.NAME}}:{parsed_url.port}{parsed_url.path}'
         })
         for prom_metric in schema:
             if len(prom_metric['labels']) == 0:
@@ -162,15 +163,19 @@ class Zabbix60Template():
         }]
         return discovery_rule
 
-TEMPLATE_TAGS = [
-    {'tag': 'Application', 'value': 'My Application'}
-]
-METRICS_URL = args.url
+
+
+tags = []
+if len(args.tag) > 0:
+    tags.append({
+        'tag': 'Application',
+        'value': args.tag
+    })
 
 template = Zabbix60Template(
     name=args.name,
     master_key=args.master_key,
-    tags=TEMPLATE_TAGS
+    tags=tags
     )
 template.build(args.url)
 print(template.to_yaml())
